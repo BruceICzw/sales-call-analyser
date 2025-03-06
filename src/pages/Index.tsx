@@ -4,6 +4,7 @@ import Hero from '@/components/Hero';
 import FileUpload from '@/components/FileUpload';
 import AnalysisResults from '@/components/AnalysisResults';
 import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 interface AnalysisState {
   metrics: Array<{
@@ -24,7 +25,7 @@ const Index = () => {
     setSelectedFile(file);
     setIsAnalyzing(true);
 
-    // Simulate analysis process
+    // Simulate analysis process with a more realistic delay
     setTimeout(() => {
       // Mock analysis results
       setAnalysis({
@@ -72,11 +73,18 @@ const Index = () => {
       <div className="container mx-auto px-4">
         {!selectedFile && <Hero />}
         
-        {!analysis ? (
-          <div className="mt-12 mb-20">
-            <FileUpload onFileSelect={handleFileSelect} />
+        {isAnalyzing ? (
+          <div className="mt-12 mb-20 flex flex-col items-center justify-center">
+            <div className="glass-card p-8 rounded-lg text-center max-w-md">
+              <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
+              <h3 className="text-xl font-semibold mb-2">Analyzing Your Sales Call</h3>
+              <p className="text-gray-600">
+                Our AI is reviewing your recording using Alex Hormozi's frameworks.
+                This usually takes 30-60 seconds.
+              </p>
+            </div>
           </div>
-        ) : (
+        ) : analysis ? (
           <div className="mt-12 mb-20">
             <AnalysisResults 
               metrics={analysis.metrics}
@@ -85,9 +93,13 @@ const Index = () => {
               onReset={handleReset}
             />
           </div>
+        ) : (
+          <div className="mt-12 mb-20">
+            <FileUpload onFileSelect={handleFileSelect} />
+          </div>
         )}
 
-        {!analysis && (
+        {!analysis && !isAnalyzing && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 animate-fade-up">
             {features.map((feature, index) => (
               <Card key={index} className="glass-card p-6">
