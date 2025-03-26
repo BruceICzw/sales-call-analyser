@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 interface Metric {
   name: string;
@@ -126,7 +127,7 @@ const AnalysisResults = ({
               />
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">{metric.feedback}</p>
+              <MarkdownRenderer>{metric.feedback}</MarkdownRenderer>
             </CardContent>
           </Card>
         ))}
@@ -153,7 +154,7 @@ const AnalysisResults = ({
                 className="flex items-start gap-2 p-2 rounded hover:bg-gray-50 transition-colors"
               >
                 <ChevronRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                <span>{recommendation}</span>
+                <MarkdownRenderer>{recommendation}</MarkdownRenderer>
               </li>
             ))}
           </ul>

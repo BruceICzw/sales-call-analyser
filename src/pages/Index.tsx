@@ -5,6 +5,7 @@ import FileUpload from '@/components/FileUpload';
 import AnalysisResults from '@/components/AnalysisResults';
 import { Card } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface AnalysisState {
   metrics: Array<{
@@ -15,6 +16,7 @@ interface AnalysisState {
   overallScore: number;
   recommendations: string[];
 }
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -25,42 +27,35 @@ const Index = () => {
     setSelectedFile(file);
     setIsAnalyzing(true);
 
-    // Simulate analysis process with a more realistic delay
-    setTimeout(() => {
-      // Mock analysis results
-      setAnalysis({
-        metrics: [
-          {
-            name: "Building Rapport",
-            score: 85,
-            feedback: "Strong opening and consistent engagement throughout the call.",
-          },
-          {
-            name: "Pain Point Identification",
-            score: 70,
-            feedback: "Good probing questions, but missed some key pain points.",
-          },
-          {
-            name: "Value Proposition",
-            score: 90,
-            feedback: "Excellent presentation of value and benefits.",
-          },
-          {
-            name: "Objection Handling",
-            score: 65,
-            feedback: "Consider using the Feel, Felt, Found framework more consistently.",
-          }
-        ],
-        overallScore: 78,
-        recommendations: [
-          "Use more specific examples when addressing objections",
-          "Implement the Feel, Felt, Found framework for handling objections",
-          "Ask more probing questions to uncover deeper pain points",
-          "Practice assumptive closing techniques",
-        ]
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
+        method: "POST",
+        body: formData,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Analysis failed");
+      }
+
+      const data = await response.json();
+      setAnalysis(data.analysis);
+      toast({
+        title: "Analysis Complete",
+        description: "Your sales call has been analyzed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Failed to analyze sales call",
+        variant: "destructive",
+      });
+    } finally {
       setIsAnalyzing(false);
-    }, 3000);
+    }
   };
 
   const handleReset = () => {
@@ -72,21 +67,22 @@ const Index = () => {
     <div className="min-h-screen animated-gradient">
       <div className="container mx-auto px-4">
         {!selectedFile && <Hero />}
-        
+
         {isAnalyzing ? (
           <div className="mt-12 mb-20 flex flex-col items-center justify-center">
             <div className="glass-card p-8 rounded-lg text-center max-w-md">
               <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
-              <h3 className="text-xl font-semibold mb-2">Analyzing Your Sales Call</h3>
+              <h3 className="text-xl font-semibold mb-2">
+                Analyzing Your Sales Call
+              </h3>
               <p className="text-gray-600">
-                Our AI is reviewing your recording using Alex Hormozi's frameworks.
-                This usually takes 30-60 seconds.
+                This may take 1-2 minutes. Please keep this tab open...
               </p>
             </div>
           </div>
         ) : analysis ? (
           <div className="mt-12 mb-20">
-            <AnalysisResults 
+            <AnalysisResults
               metrics={analysis.metrics}
               overallScore={analysis.overallScore}
               recommendations={analysis.recommendations}

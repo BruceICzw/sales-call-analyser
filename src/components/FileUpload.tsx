@@ -14,26 +14,15 @@ const FileUpload = ({ onFileSelect }: FileUploadProps) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      // Simulate upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 5;
-        setUploadProgress(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          onFileSelect(file);
-          toast({
-            title: "File uploaded successfully",
-            description: `${file.name} has been uploaded and is ready for analysis.`,
-          });
-        }
-      }, 100);
-    }
-  }, [onFileSelect, toast]);
-
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (file) {
+        onFileSelect(file);
+      }
+    },
+    [onFileSelect]
+  );
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
