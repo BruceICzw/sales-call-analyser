@@ -1,40 +1,28 @@
-import { Progress } from "@/components/ui/progress";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Download,
-  ChevronRight,
-  BarChart,
-  LineChart,
-  RefreshCw,
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import MarkdownRenderer from "./MarkdownRenderer";
+import { BarChart, ChevronRight, Download, LineChart, RefreshCw } from "lucide-react";
+import { Button } from "./ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Progress } from "./ui/progress";
+import { Badge } from "./ui/badge";
 
-interface Metric {
+export interface Metric {
   name: string;
   score: number;
   feedback: string;
 }
 
 interface AnalysisResultsProps {
-  metrics: Metric[];
-  overallScore: number;
-  recommendations: string[];
+  metrics?: Metric[]; // Make metrics optional
+  overallScore?: number; // Make overallScore optional
+  recommendations?: string[]; // Make recommendations optional
   onReset: () => void;
 }
 
 const AnalysisResults = ({
-  metrics,
-  overallScore,
-  recommendations,
+  metrics = [], // Default to an empty array
+  overallScore = 0, // Default to 0
+  recommendations = [], // Default to an empty array
   onReset,
 }: AnalysisResultsProps) => {
   const { toast } = useToast();
@@ -108,17 +96,6 @@ const AnalysisResults = ({
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">{metric.name}</CardTitle>
-                <Badge
-                  variant={
-                    metric.score >= 80
-                      ? "default"
-                      : metric.score >= 60
-                      ? "secondary"
-                      : "outline"
-                  }
-                >
-                  {metric.score}%
-                </Badge>
               </div>
               <Progress
                 value={metric.score}
@@ -154,7 +131,7 @@ const AnalysisResults = ({
                 className="flex items-start gap-2 p-2 rounded hover:bg-gray-50 transition-colors"
               >
                 <ChevronRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                <MarkdownRenderer>{recommendation}</MarkdownRenderer>
+                {recommendation}
               </li>
             ))}
           </ul>

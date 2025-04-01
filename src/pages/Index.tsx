@@ -1,11 +1,13 @@
-
-import { useState } from 'react';
-import Hero from '@/components/Hero';
-import FileUpload from '@/components/FileUpload';
-import AnalysisResults from '@/components/AnalysisResults';
-import { Card } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useState } from "react";
+import Hero from "@/components/Hero";
+import FileUpload from "@/components/FileUpload";
+import AnalysisResults from "@/components/AnalysisResults";
+import AnalysisHistory from "@/components/AnalysisHistory";
+import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { Link } from "react-router-dom";
 
 interface AnalysisState {
   metrics: Array<{
@@ -16,12 +18,14 @@ interface AnalysisState {
   overallScore: number;
   recommendations: string[];
 }
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
+  const { token } = useAuth();
 
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
@@ -33,6 +37,9 @@ const Index = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
@@ -66,7 +73,12 @@ const Index = () => {
   return (
     <div className="min-h-screen animated-gradient">
       <div className="container mx-auto px-4">
-        {!selectedFile && <Hero />}
+        <div className="flex justify-end my-4">
+          <Link to="/history" className="text-primary hover:underline">
+            View Analysis History
+          </Link>
+        </div>
+        {!selectedFile && !analysis && <Hero />}
 
         {isAnalyzing ? (
           <div className="mt-12 mb-20 flex flex-col items-center justify-center">
@@ -88,41 +100,16 @@ const Index = () => {
               recommendations={analysis.recommendations}
               onReset={handleReset}
             />
+            <AnalysisHistory />
           </div>
         ) : (
           <div className="mt-12 mb-20">
-            <FileUpload onFileSelect={handleFileSelect} />
-          </div>
-        )}
-
-        {!analysis && !isAnalyzing && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 animate-fade-up">
-            {features.map((feature, index) => (
-              <Card key={index} className="glass-card p-6">
-                <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </Card>
-            ))}
+            <FileUpload />
           </div>
         )}
       </div>
     </div>
   );
 };
-
-const features = [
-  {
-    title: "AI-Powered Analysis",
-    description: "Get instant feedback on your sales calls using advanced AI technology.",
-  },
-  {
-    title: "Expert Framework",
-    description: "Analysis based on proven sales frameworks and strategies.",
-  },
-  {
-    title: "Actionable Insights",
-    description: "Receive specific steps and recommendations to improve your sales performance.",
-  },
-];
 
 export default Index;
