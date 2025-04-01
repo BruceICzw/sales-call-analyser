@@ -3,8 +3,18 @@ import { ChevronRight, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
+import { useRef } from 'react';
 
 const Hero = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleStartAnalysis = () => {
+    // Trigger the file input click
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <div className="py-24 px-6 text-center relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-blue-50 to-transparent opacity-50 pointer-events-none"></div>
@@ -23,7 +33,7 @@ const Hero = () => {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button size="lg" className="animate-fade-up group">
+          <Button size="lg" className="animate-fade-up group" onClick={handleStartAnalysis}>
             Start Analysis <FileUp className="ml-2 h-5 w-5 group-hover:translate-y-[-2px] transition-transform" />
           </Button>
           
@@ -33,6 +43,25 @@ const Hero = () => {
             </Link>
           </Button>
         </div>
+        
+        {/* Hidden file input element */}
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="audio/*,video/*"
+          onChange={(e) => {
+            // This will be handled by the FileUpload component
+            // We just need this to relay the selected file to the parent component
+            if (e.target.files && e.target.files[0]) {
+              // Custom event to communicate with the FileUpload component
+              const customEvent = new CustomEvent('hero-file-selected', {
+                detail: { file: e.target.files[0] }
+              });
+              document.dispatchEvent(customEvent);
+            }
+          }}
+        />
         
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div className="glass-card p-6 hover-scale">

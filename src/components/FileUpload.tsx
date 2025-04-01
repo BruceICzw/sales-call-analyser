@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,20 @@ const FileUpload = () => {
   const { token } = useAuth();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
+  useEffect(() => {
+    const handleHeroFileSelected = (event: CustomEvent<{ file: File }>) => {
+      if (event.detail.file) {
+        uploadFile(event.detail.file);
+      }
+    };
+
+    document.addEventListener('hero-file-selected', handleHeroFileSelected as EventListener);
+
+    return () => {
+      document.removeEventListener('hero-file-selected', handleHeroFileSelected as EventListener);
+    };
+  }, [token]);
+
   const uploadFile = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -32,7 +46,6 @@ const FileUpload = () => {
       setIsUploading(true);
       setUploadProgress(0);
   
-      // Simulate upload progress
       const interval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) {
@@ -62,7 +75,6 @@ const FileUpload = () => {
       const result = await response.json();
       console.log("Analysis Data: ", result);
   
-      // Extract the nested analysis object
       setAnalysisData(result.analysis);
   
       toast({
@@ -81,6 +93,7 @@ const FileUpload = () => {
       setIsUploading(false);
     }
   };
+
   const resetUpload = () => {
     setUploadProgress(0);
     setAnalysisData(null);
@@ -99,7 +112,7 @@ const FileUpload = () => {
       "audio/*": [".mp3", ".wav", ".m4a"],
       "video/*": [".mp4", ".mov"],
     },
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 50 * 1024 * 1024,
     maxFiles: 1,
     disabled: isUploading || !token,
   });
