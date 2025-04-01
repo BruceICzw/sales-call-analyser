@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -82,6 +83,9 @@ export default {
       animation: {
         "fade-up": "fade-up 0.5s ease-out",
         "fade-down": "fade-down 0.5s ease-out",
+      },
+      scale: {
+        '102': '1.02',
       },
       typography: {
         DEFAULT: {
