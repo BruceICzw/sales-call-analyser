@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ interface AnalysisData {
 }
 
 const FileUpload = () => {
+  const fileUploadRef = useRef<HTMLDivElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -45,6 +47,14 @@ const FileUpload = () => {
     try {
       setIsUploading(true);
       setUploadProgress(0);
+  
+      // Scroll to upload progress section
+      if (fileUploadRef.current) {
+        fileUploadRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
   
       const interval = setInterval(() => {
         setUploadProgress((prev) => {
@@ -129,7 +139,7 @@ const FileUpload = () => {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div ref={fileUploadRef} className="w-full max-w-2xl mx-auto">
       <div
         {...getRootProps()}
         className={`glass-card p-8 rounded-lg text-center cursor-pointer transition-all duration-300 border-2 border-dashed ${
