@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   ChevronRight, 
   RefreshCw, 
@@ -13,7 +15,11 @@ import {
   FileText, 
   Clock,
   ArrowLeft,
-  Eye
+  Eye,
+  Search,
+  CalendarDays,
+  Filter,
+  ListFilter
 } from "lucide-react";
 import {
   Table,
@@ -23,6 +29,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 interface Metric {
@@ -48,11 +63,18 @@ interface Analysis {
 
 const AnalysisHistory = () => {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
+  const [filteredAnalyses, setFilteredAnalyses] = useState<Analysis[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<DetailedAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
   const { token } = useAuth();
   const { toast } = useToast();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+  const itemsPerPage = 5;
+  
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchAnalyses = async () => {
@@ -71,6 +93,7 @@ const AnalysisHistory = () => {
 
         const data = await response.json();
         setAnalyses(data);
+        setFilteredAnalyses(data);
       } catch (error) {
         toast({
           title: "Error",
@@ -87,6 +110,52 @@ const AnalysisHistory = () => {
       fetchAnalyses();
     }
   }, [token, toast]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredAnalyses(analyses);
+    } else {
+      const filtered = analyses.filter(analysis => 
+        analysis.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        formatDate(analysis.created_at).toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredAnalyses(filtered);
+    }
+    setCurrentPage(1);
+  }, [searchQuery, analyses]);
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      const response = await fetch(`${API_BASE_URL}/analyses`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to refresh analyses");
+      }
+
+      const data = await response.json();
+      setAnalyses(data);
+      setFilteredAnalyses(data);
+      toast({
+        title: "Success",
+        description: "Analysis history refreshed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to refresh analyses",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleAnalysisClick = async (analysis: Analysis) => {
     try {
@@ -128,6 +197,12 @@ const AnalysisHistory = () => {
     return "bg-red-500";
   };
 
+  const getScoreTextClass = (score: number) => {
+    if (score >= 80) return "bg-green-100 text-green-800";
+    if (score >= 60) return "bg-amber-100 text-amber-800";
+    return "bg-red-100 text-red-800";
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
@@ -137,6 +212,79 @@ const AnalysisHistory = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAnalyses.length / itemsPerPage);
+  const paginatedAnalyses = filteredAnalyses.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const renderPagination = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    // Always show first page
+    pages.push(
+      <PaginationItem key="first">
+        <PaginationLink 
+          isActive={currentPage === 1} 
+          onClick={() => setCurrentPage(1)}
+        >
+          1
+        </PaginationLink>
+      </PaginationItem>
+    );
+    
+    // Show ellipsis if needed
+    if (currentPage > 3) {
+      pages.push(
+        <PaginationItem key="ellipsis-start">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+    
+    // Show pages around current page
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (i <= 1 || i >= totalPages) continue;
+      pages.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            isActive={currentPage === i} 
+            onClick={() => setCurrentPage(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    // Show ellipsis if needed
+    if (currentPage < totalPages - 2 && totalPages > 3) {
+      pages.push(
+        <PaginationItem key="ellipsis-end">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+    
+    // Always show last page if there's more than one page
+    if (totalPages > 1) {
+      pages.push(
+        <PaginationItem key="last">
+          <PaginationLink 
+            isActive={currentPage === totalPages} 
+            onClick={() => setCurrentPage(totalPages)}
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    return pages;
   };
 
   if (loading) {
@@ -158,22 +306,32 @@ const AnalysisHistory = () => {
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to History
         </Button>
         
-        <div className="text-center mb-8">
-          <Badge variant="secondary" className="mb-2">
-            Analysis #{selectedAnalysis.id}
+        <div className="flex flex-col md:flex-row gap-4 mb-8 items-center">
+          <div className="bg-primary/5 p-3 rounded-full">
+            <FileText className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <Badge variant="outline" className="mb-2">
+              Analysis #{selectedAnalysis.id}
+            </Badge>
+            <h2 className="text-2xl md:text-3xl font-bold">Call Analysis Details</h2>
+            <p className="text-gray-500 flex items-center gap-2 mt-1">
+              <CalendarDays className="h-4 w-4" />
+              {formatDate(selectedAnalysis.created_at)}
+            </p>
+          </div>
+          <Badge className={`text-lg px-4 py-2 ${getScoreTextClass(selectedAnalysis.overall_score)}`}>
+            {selectedAnalysis.overall_score}%
           </Badge>
-          <h2 className="text-3xl font-bold mb-2">Call Analysis Details</h2>
-          <p className="text-gray-600">Analyzed on {formatDate(selectedAnalysis.created_at)}</p>
         </div>
 
         {/* Overall Score */}
-        <Card className="glass-card mb-8 overflow-hidden">
-          <CardHeader className="text-center">
+        <Card className="glass-card mb-8 overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
+          <CardHeader className="text-center bg-gradient-to-r from-gray-50 to-gray-100">
             <CardTitle className="flex items-center justify-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" /> Overall Performance
             </CardTitle>
             <div className="mt-6 relative">
-
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="mt-2"></div>
                 <div
@@ -211,8 +369,8 @@ const AnalysisHistory = () => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {selectedAnalysis.metrics.map((metric, index) => (
-            <Card key={index} className="glass-card hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
+            <Card key={index} className="glass-card hover:shadow-md transition-shadow border border-gray-200">
+              <CardHeader className="pb-2 bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg">{metric.name}</CardTitle>
                   <Badge className={getScoreBgClass(metric.score)}>
@@ -232,12 +390,12 @@ const AnalysisHistory = () => {
           <ChevronRight className="h-5 w-5 mr-2 text-primary" />
           Recommended Actions
         </h3>
-        <Card className="glass-card mb-8 hover:shadow-md transition-shadow">
+        <Card className="glass-card mb-8 hover:shadow-md transition-shadow border border-gray-200">
           <CardContent className="pt-6">
             <ul className="space-y-4">
               {selectedAnalysis.recommendations.map((rec, index) => (
-                <li key={index} className="flex items-start gap-3 p-2 rounded hover:bg-gray-50 transition-colors">
-                  <Badge className="mt-0.5 h-6 w-6 flex items-center justify-center rounded-full shrink-0">
+                <li key={index} className="flex items-start gap-3 p-3 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <Badge variant="outline" className="mt-0.5 h-6 w-6 flex items-center justify-center rounded-full shrink-0 bg-primary/10 border-primary/30 text-primary">
                     {index + 1}
                   </Badge>
                   <div className="flex-1">
@@ -249,12 +407,12 @@ const AnalysisHistory = () => {
           </CardContent>
         </Card>
 
-                {/* Transcript */}
+        {/* Transcript */}
         <h3 className="text-xl font-semibold mb-4 flex items-center">
           <FileText className="h-5 w-5 mr-2 text-primary" />
           Call Transcript
         </h3>
-        <Card className="glass-card mb-8 hover:shadow-md transition-shadow">
+        <Card className="glass-card mb-8 hover:shadow-md transition-shadow border border-gray-200">
           <CardContent className="pt-6">
             <div className="bg-gray-50 p-4 rounded-md max-h-80 overflow-y-auto text-sm space-y-4">
               {selectedAnalysis.transcript.split("\n").map((line, index) => {
@@ -287,7 +445,7 @@ const AnalysisHistory = () => {
           </CardContent>
         </Card>
         {/* Actions */}
-        <div className="flex justify-center mt-8 mb-12">
+        <div className="flex justify-center gap-4 mt-8 mb-12">
           <Button onClick={() => setSelectedAnalysis(null)} className="gap-2 px-6">
             <ArrowLeft className="h-4 w-4" /> Return to History
           </Button>
@@ -297,26 +455,45 @@ const AnalysisHistory = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="text-center mb-8">
-        <Badge variant="outline" className="mb-2">
-          Analysis Records
-        </Badge>
-        <h2 className="text-3xl font-bold mb-2">Your Sales Call History</h2>
-        <p className="text-gray-600">Select a record to view detailed analysis</p>
+    <div className="w-full max-w-4xl mx-auto" ref={tableRef}>
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input 
+            placeholder="Search by ID or date..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="gap-2 min-w-24"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
-      {analyses.length === 0 ? (
-        <Card className="glass-card p-8 text-center mb-8">
-          <p className="text-lg text-gray-500">No analysis records found.</p>
-          <p className="mt-2 text-gray-400">Upload a sales call recording to get started.</p>
+      {filteredAnalyses.length === 0 ? (
+        <Card className="glass-card p-8 text-center mb-8 border border-gray-200">
+          <div className="flex justify-center mb-4">
+            <ListFilter className="h-12 w-12 text-gray-300" />
+          </div>
+          <p className="text-lg text-gray-500">No matching analysis records found.</p>
+          <p className="mt-2 text-gray-400">
+            {analyses.length > 0 ? 'Try adjusting your search criteria.' : 'Upload a sales call recording to get started.'}
+          </p>
         </Card>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-md border border-gray-200 shadow-sm overflow-hidden">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead className="w-[80px]">ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead>Performance</TableHead>
@@ -324,21 +501,28 @@ const AnalysisHistory = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {analyses.map((analysis) => (
-                <TableRow key={analysis.id}>
+              {paginatedAnalyses.map((analysis) => (
+                <TableRow key={analysis.id} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="font-medium">#{analysis.id}</TableCell>
-                  <TableCell>{formatDate(analysis.created_at)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      {formatDate(analysis.created_at)}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge className={getScoreBgClass(analysis.overall_score)}>
                       {analysis.overall_score}%
                     </Badge>
                   </TableCell>
                   <TableCell className={getScoreColorClass(analysis.overall_score)}>
-                    {analysis.overall_score >= 80 
-                      ? "Excellent" 
-                      : analysis.overall_score >= 60 
-                      ? "Good" 
-                      : "Needs Improvement"}
+                    <span className={`py-1 px-2 rounded text-sm ${getScoreTextClass(analysis.overall_score)}`}>
+                      {analysis.overall_score >= 80 
+                        ? "Excellent" 
+                        : analysis.overall_score >= 60 
+                        ? "Good" 
+                        : "Needs Improvement"}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button 
@@ -353,6 +537,30 @@ const AnalysisHistory = () => {
               ))}
             </TableBody>
           </Table>
+          
+          {totalPages > 1 && (
+            <div className="py-4 border-t border-gray-200">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  
+                  {renderPagination()}
+                  
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
     </div>
