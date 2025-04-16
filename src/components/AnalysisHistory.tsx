@@ -249,19 +249,43 @@ const AnalysisHistory = () => {
           </CardContent>
         </Card>
 
-        {/* Transcript */}
+                {/* Transcript */}
         <h3 className="text-xl font-semibold mb-4 flex items-center">
           <FileText className="h-5 w-5 mr-2 text-primary" />
           Call Transcript
         </h3>
         <Card className="glass-card mb-8 hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
-            <div className="bg-gray-50 p-4 rounded-md max-h-80 overflow-y-auto whitespace-pre-wrap text-sm">
-              {selectedAnalysis.transcript}
+            <div className="bg-gray-50 p-4 rounded-md max-h-80 overflow-y-auto text-sm space-y-4">
+              {selectedAnalysis.transcript.split("\n").map((line, index) => {
+                const isCustomer = line.trim().startsWith("John:");
+                const isAgent = line.trim().startsWith("Lauren:");
+        
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-start ${
+                      isCustomer ? "justify-start" : "justify-end"
+                    }`}
+                  >
+                    <div
+                      className={`p-3 rounded-lg max-w-xs ${
+                        isCustomer
+                          ? "bg-blue-100 text-blue-900"
+                          : "bg-green-100 text-green-900"
+                      }`}
+                    >
+                      <span className="font-semibold">
+                        {isCustomer ? "Customer" : "Agent"}:
+                      </span>{" "}
+                      {line.replace(/^John:|^Lauren:/, "").trim()}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
-
         {/* Actions */}
         <div className="flex justify-center mt-8 mb-12">
           <Button onClick={() => setSelectedAnalysis(null)} className="gap-2 px-6">
